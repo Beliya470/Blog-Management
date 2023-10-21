@@ -41,18 +41,10 @@ class ReviewForm(FlaskForm):
     rating = IntegerField('Rating', validators=[DataRequired(), NumberRange(min=1, max=5)])
 
 # User routes
-@app.route('/register', methods=['POST'])
-def register_user():
-    form = RegisterForm()
-    if form.validate_on_submit():
-        new_user = User(username=form.username.data)
-        new_user.set_password(form.password.data)
-        
-        db.session.add(new_user)
-        db.session.commit()
-        
-        return jsonify({'message': 'User registered successfully'}), 201
-    return jsonify({'error': 'Registration failed', 'errors': form.errors}), 400
+@app.route('/')
+def index():
+    return "Hello, world!"
+
 
 @app.route('/login', methods=['POST'])
 def login_user():
