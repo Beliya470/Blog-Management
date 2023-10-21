@@ -1,5 +1,5 @@
 import React from 'react';
-import { createRoot } from "react-dom/client"; // Adjusted import here
+import { createRoot } from "react-dom"; // Adjusted import here
 import { BrowserRouter as Router } from "react-router-dom";
 import './index.css';
 import App from './App';
