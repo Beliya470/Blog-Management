@@ -4,11 +4,11 @@ const defaultHeaders = () => ({
   'Authorization': `Bearer ${localStorage.getItem('token')}`
 });
 
-const encodeFormData = (data) => {
-  return Object.keys(data)
-    .map(key => encodeURIComponent(key) + '=' + encodeURIComponent(data[key]))
-    .join('&');
-}
+// const encodeFormData = (data) => {
+//   return Object.keys(data)
+//     .map(key => encodeURIComponent(key) + '=' + encodeURIComponent(data[key]))
+//     .join('&');
+// }
 
 
 export const modifyBlogPost = async (blogId, title, content) => {
