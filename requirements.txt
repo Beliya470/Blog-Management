@@ -3,7 +3,7 @@ aniso8601==9.0.1
 blinker==1.6.2
 click==8.1.7
 email-validator==2.0.0.post2
-Faker==4.0.0
+Faker==18.13.0
 Flask==2.0.2
 Flask-Cors==4.0.0
 Flask-Cors==4.0.0
