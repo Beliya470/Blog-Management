@@ -1,0 +1,129 @@
+/* Dashboard Specific Styles */
+
+.dashboard-container {
+    font-family: 'Arial', sans-serif;
+    background-color: #F7FAFC;  /* Light bluish background */
+    padding: 20px;
+    color: #2D3748;  /* Almost black color for text */
+}
+
+.dashboard-container h1, .dashboard-container h2, .dashboard-container h3 {
+    margin-top: 0;
+}
+
+.dashboard-container h1 {
+    font-size: 2.5em;
+    color: #2C7A7B;  /* Tealish accent color for headers */
+    margin-bottom: 20px;
+    border-bottom: 3px solid #2C7A7B;
+    display: inline-block;
+}
+
+.dashboard-container p {
+    font-size: 1.1em;
+    color: #4A5568;  /* Slightly grayish for less important text */
+    margin-bottom: 20px;
+}
+
+.dashboard-container input[type="text"], .dashboard-container textarea {
+    width: 100%;
+    padding: 10px 15px;
+    font-size: 16px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    border: 1px solid #CBD5E0;  /* Light gray border */
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);  /* Slight shadow for depth */
+}
+
+.dashboard-container button {
+    background-color: #2C7A7B;  
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.3s;
+}
+
+.dashboard-container button:hover {
+    background-color: #285E61;
+    transform: translateY(-2px);
+}
+
+.dashboard-container h2 {
+    font-size: 2em;
+    color: #2C7A7B;
+    border-bottom: 2px solid #E2E8F0;  /* Light gray underline */
+    margin-bottom: 30px;
+}
+
+.dashboard-container h3 {
+    font-size: 1.6em;
+    color: #4A5568;
+    margin-bottom: 20px;
+}
+
+.dashboard-container img {
+    display: block;
+    margin: 20px auto;
+    max-width: 100%; 
+    max-height: 500px;
+    border-radius: 15px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);  
+}
+
+
+.dashboard-image {
+    margin: 30px 0;
+}
+
+.post-form {
+    background-color: #FFFFFF;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    margin-bottom: 30px;
+}
+
+.blog-posts {
+    margin-top: 30px;
+}
+
+.post-item {
+    background-color: #FFFFFF;
+    padding: 20px;
+    margin-bottom: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    position: relative;
+}
+
+.success-message {
+    background-color: #A0DFA9;  /* Greenish background for success messages */
+    padding: 10px 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 1.2em;
+    text-align: center;
+}
+
+.review-item {
+    border-top: 1px solid #E2E8F0;
+    padding: 10px 0;
+    margin-top: 20px;
+}
+
+.reviews {
+    margin-top: 20px;
+}
+
+/* Media Queries for Responsive Design */
+@media screen and (max-width: 768px) {
+    .dashboard-container img {
+        width: 100%;
+    }
+    .post-form, .post-item {
+        padding: 20px;
+    }
+}
+

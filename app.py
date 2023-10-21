@@ -1,232 +1,230 @@
+# app.py
+
 from flask import Flask, jsonify, request, session, make_response
+from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_cors import CORS
 from flask_wtf import FlaskForm
-from wtforms import StringField, IntegerField
-from wtforms.validators import DataRequired, Length, NumberRange
-from models import db, User, ServiceProvider, ServiceRequest
+from wtforms import StringField, PasswordField, TextAreaField, IntegerField
+from wtforms.validators import DataRequired, Length, EqualTo, NumberRange
 import os
 
+# Local model imports
+from models import db, User, BlogPost, Review
+
 app = Flask(__name__)
-CORS(app)
+CORS(app)  # handling Cross-Origin Resource Sharing
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.secret_key = os.environ.get('SECRET_KEY')  # for session management
 
-migrate = Migrate(app, db)
+# Initialize extensions
 db.init_app(app)
+migrate = Migrate(app, db)
 
-# Define a form for creating service providers
-class CreateServiceProviderForm(FlaskForm):
-    fullname = StringField('Full Name', validators=[DataRequired()])
-    skills = StringField('Skills', validators=[DataRequired(), Length(min=3)])
-    experience = IntegerField('Experience (years)', validators=[NumberRange(min=0)])
-    availability = StringField('Availability', validators=[DataRequired()])
+# Define forms
+class RegisterForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired()])
+    password = PasswordField('Password', validators=[DataRequired()])
+    confirm = PasswordField('Repeat Password', validators=[DataRequired(), EqualTo('password')])
 
-# POST /login
-@app.route('/login', methods=['POST'])
-def login():
-    if request.method == 'POST':
-        # Get user credentials from the request data
-        data = request.json
-        username = data.get('username')
-        password = data.get('password')
+class LoginForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired()])
+    password = PasswordField('Password', validators=[DataRequired()])
 
-        # Query the database to find a user with the provided username
-        user = User.query.filter_by(username=username).first()
+class BlogPostForm(FlaskForm):
+    title = StringField('Title', validators=[DataRequired()])
+    content = TextAreaField('Content', validators=[DataRequired()])
 
-        if user and user.password == password:
-            # Authentication successful, create a session
-            session['user_id'] = user.id
+class ReviewForm(FlaskForm):
+    content = TextAreaField('Content', validators=[DataRequired()])
+    rating = IntegerField('Rating', validators=[DataRequired(), NumberRange(min=1, max=5)])
 
-            # Return a JSON response indicating successful login
-            return jsonify({'message': 'Authentication successful'})
-
-        # Authentication failed, return a JSON response
-        return jsonify({'error': 'Invalid credentials'})
-
-# POST /service-provider (Create Service Provider)
-@app.route('/service-provider', methods=['POST'])
-def create_service_provider():
-    if request.method == 'POST':
-        form = CreateServiceProviderForm(request.form)
-
-        if form.validate():
-            # Get data from the validated form
-            fullname = form.fullname.data
-            skills = form.skills.data
-            experience = form.experience.data
-            availability = form.availability.data
-
-            try:
-                # Create a new service provider
-                new_service_provider = ServiceProvider(
-                    fullname=fullname,
-                    skills=skills,
-                    experience=experience,
-                    availability=availability
-                )
-
-                # Add the new service provider to the database
-                db.session.add(new_service_provider)
-                db.session.commit()
-
-                return jsonify({'message': 'Service provider created successfully'})
-            except Exception as e:
-                db.session.rollback()
-                return jsonify({'error': str(e)})
-        else:
-            return jsonify({'error': 'Form validation failed'})
-
-# POST /service-request
-@app.route('/service-request', methods=['POST'])
-def create_service_request():
-    if request.method == 'POST':
-        # Get JSON data from the request
-        data = request.json
-
-        # Create a new ServiceRequest object
-        new_service_request = ServiceRequest(
-            title=data.get('title'),
-            description=data.get('description'),
-            location=data.get('location'),
-            status=data.get('status'),
-            user_id=data.get('user_id')
-        )
-
-        # Add the new service request to the database
-        db.session.add(new_service_request)
+# User routes
+@app.route('/register', methods=['POST'])
+def register_user():
+    form = RegisterForm()
+    if form.validate_on_submit():
+        new_user = User(username=form.username.data)
+        new_user.set_password(form.password.data)
+        
+        db.session.add(new_user)
         db.session.commit()
+        
+        return jsonify({'message': 'User registered successfully'}), 201
+    return jsonify({'error': 'Registration failed', 'errors': form.errors}), 400
 
-        return jsonify({'message': 'Service request created successfully'})
+@app.route('/login', methods=['POST'])
+def login_user():
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(username=form.username.data).first()
+        if user and user.check_password(form.password.data):
+            session['user_id'] = user.id
+            return jsonify({'message': 'Logged in successfully'}), 200
+        return jsonify({'error': 'Invalid credentials'}), 401
+    return jsonify({'error': 'Login failed', 'errors': form.errors}), 400
 
-# GET /users
-@app.route('/users', methods=['GET'])
-def get_users():
-    users = User.query.all()
-    user_list = []
-    for user in users:
-        user_list.append({
-            'id': user.id,
-            'username': user.username,
-            'email': user.email
-        })
-    return jsonify(user_list)
-
-# GET /users/:id
-@app.route('/users/<int:id>', methods=['GET'])
-def get_user(id):
-    user = User.query.get(id)
+@app.route('/users/<int:user_id>', methods=['GET'])
+def get_user(user_id):
+    user = User.query.get(user_id)
     if user is None:
         return make_response(jsonify({'error': 'User not found'}), 404)
-
-    service_requests = []
-    for request in user.service_requests:
-        service_requests.append({
-            'id': request.id,
-            'title': request.title,
-            'description': request.description,
-            'location': request.location,
-            'status': request.status,
-            'rating': request.rating  
-        })
-
-    user_data = {
+    
+    return jsonify({
         'id': user.id,
-        'username': user.username,
-        'email': user.email,
-        'service_requests': service_requests
-    }
-    return jsonify(user_data)
+        'username': user.username
+        # Include any other fields as needed
+    }), 200
 
+@app.route('/users', methods=['GET'])
+def get_all_users():
+    users = User.query.all()
+    return jsonify([{
+        'id': user.id,
+        'username': user.username
+        # Include any other fields as needed
+    } for user in users]), 200
 
-# GET /service-providers
-@app.route('/service-providers', methods=['GET'])
-def get_service_providers():
-    providers = ServiceProvider.query.all()
-    provider_list = []
-    for provider in providers:
-        provider_list.append({
-            'id': provider.id,
-            'fullname': provider.fullname,
-            'skills': provider.skills,
-            'experience': provider.experience,
-            'availability': provider.availability
-        })
-    return jsonify(provider_list)
-
-# GET /service-providers/:id
-@app.route('/service-providers/<int:id>', methods=['GET'])
-def get_service_provider(id):
-    provider = ServiceProvider.query.get(id)
-    if provider is None:
-        return make_response(jsonify({'error': 'Service Provider not found'}), 404)
-
-    user_data = {
-        'id': provider.id,
-        'fullname': provider.fullname,
-        'skills': provider.skills,
-        'experience': provider.experience,
-        'availability': provider.availability,
-        'user_id': provider.user_id
-    }
-    return jsonify(user_data)
-
-# GET /service-requests (Fetch a list of service requests)
-@app.route('/service_requests', methods=['GET'])
-def get_service_requests():
-    service_requests = ServiceRequest.query.all()
-    service_request_list = []
-
-    for request in service_requests:
-        service_request_list.append({
-            'id': request.id,
-            'title': request.title,
-            'description': request.description,
-            'location': request.location,
-            'status': request.status,
-            'user_id': request.user_id
-        })
-
-    return jsonify(service_request_list)
-
-@app.route('/service-requests/<int:id>', methods=['PATCH'])
-def update_service_request(id):
-    if request.method == 'PATCH':
-        # Get JSON data from the request
-        data = request.json
-
-        # Find the service request by ID
-        service_request = ServiceRequest.query.get(id)
-
-        if service_request is None:
-            return make_response(jsonify({'error': 'Service Request not found'}), 404)
-
-        # Update the service request attributes
-        service_request.title = data.get('title', service_request.title)
-        service_request.description = data.get('description', service_request.description)
-        service_request.location = data.get('location', service_request.location)
-        service_request.status = data.get('status', service_request.status)
-        service_request.user_id = data.get('user_id', service_request.user_id)
-
-        # Commit the changes to the database
+# BlogPost routes
+@app.route('/blogposts', methods=['POST'])
+def create_blogpost():
+    form = BlogPostForm()
+    if form.validate_on_submit():
+        new_blogpost = BlogPost(title=form.title.data, content=form.content.data, user_id=session.get('user_id'))
+        
+        db.session.add(new_blogpost)
         db.session.commit()
+        
+        return jsonify({'message': 'Blog post created successfully'}), 201
+    return jsonify({'error': 'Blog post creation failed', 'errors': form.errors}), 400
 
-        return jsonify({'message': 'Service request updated successfully'})
+@app.route('/blogposts/<int:blogpost_id>', methods=['GET'])
+def get_blogpost(blogpost_id):
+    blogpost = BlogPost.query.get(blogpost_id)
+    if blogpost is None:
+        return make_response(jsonify({'error': 'Blog post not found'}), 404)
+    
+    return jsonify({
+        'id': blogpost.id,
+        'title': blogpost.title,
+        'content': blogpost.content,
+        'user_id': blogpost.user_id
+        # Include any other fields as needed
+    }), 200
 
-@app.route('/service-requests/<int:id>', methods=['DELETE'])
-def delete_service_request(id):
-    if request.method == 'DELETE':
-        # Find the service request by ID
-        service_request = ServiceRequest.query.get(id)
+@app.route('/blogposts', methods=['GET'])
+def get_all_blogposts():
+    blogposts = BlogPost.query.all()
+    return jsonify([{
+        'id': blogpost.id,
+        'title': blogpost.title,
+        'content': blogpost.content,
+        'user_id': blogpost.user_id
+        # Include any other fields as needed
+    } for blogpost in blogposts]), 200
 
-        if service_request is None:
-            return make_response(jsonify({'error': 'Service Request not found'}), 404)
-
-        # Delete the service request from the database
-        db.session.delete(service_request)
+@app.route('/blogposts/<int:blogpost_id>', methods=['PUT'])
+def update_blogpost(blogpost_id):
+    form = BlogPostForm()
+    blogpost = BlogPost.query.get(blogpost_id)
+    if blogpost is None:
+        return make_response(jsonify({'error': 'Blog post not found'}), 404)
+    
+    if form.validate_on_submit():
+        blogpost.title = form.title.data
+        blogpost.content = form.content.data
+        # Update any other fields as needed
+        
         db.session.commit()
+        
+        return jsonify({'message': 'Blog post updated successfully'}), 200
+    return jsonify({'error': 'Update failed', 'errors': form.errors}), 400
 
-        return jsonify({'message': 'Service request deleted successfully'})
+@app.route('/blogposts/<int:blogpost_id>', methods=['DELETE'])
+def delete_blogpost(blogpost_id):
+    blogpost = BlogPost.query.get(blogpost_id)
+    if blogpost is None:
+        return make_response(jsonify({'error': 'Blog post not found'}), 404)
+    
+    db.session.delete(blogpost)
+    db.session.commit()
+    
+    return jsonify({'message': 'Blog post deleted successfully'}), 200
+
+# Review routes
+@app.route('/reviews', methods=['POST'])
+def create_review():
+    form = ReviewForm()
+    if form.validate_on_submit():
+        new_review = Review(content=form.content.data, rating=form.rating.data, user_id=session.get('user_id'))
+        # Assume the blogpost_id is included in the form
+        blogpost_id = form.data.get('blogpost_id')
+        new_review.blogpost_id = blogpost_id
+        
+        db.session.add(new_review)
+        db.session.commit()
+        
+        return jsonify({'message': 'Review created successfully'}), 201
+    return jsonify({'error': 'Review creation failed', 'errors': form.errors}), 400
+
+
+# Additional routes for fetching and managing reviews would follow here, similar to the BlogPost routes.
+@app.route('/reviews/<int:review_id>', methods=['GET'])
+def get_review(review_id):
+    review = Review.query.get(review_id)
+    if review is None:
+        return make_response(jsonify({'error': 'Review not found'}), 404)
+    
+    return jsonify({
+        'id': review.id,
+        'content': review.content,
+        'rating': review.rating,
+        'user_id': review.user_id,
+        'blogpost_id': review.blogpost_id
+        # Include any other fields as needed
+    }), 200
+
+@app.route('/reviews', methods=['GET'])
+def get_all_reviews():
+    reviews = Review.query.all()
+    return jsonify([{
+        'id': review.id,
+        'content': review.content,
+        'rating': review.rating,
+        'user_id': review.user_id,
+        'blogpost_id': review.blogpost_id
+        # Include any other fields as needed
+    } for review in reviews]), 200
+
+@app.route('/reviews/<int:review_id>', methods=['PUT'])
+def update_review(review_id):
+    form = ReviewForm()
+    review = Review.query.get(review_id)
+    if review is None:
+        return make_response(jsonify({'error': 'Review not found'}), 404)
+    
+    if form.validate_on_submit():
+        review.content = form.content.data
+        review.rating = form.rating.data
+        # Update any other fields as needed
+        
+        db.session.commit()
+        
+        return jsonify({'message': 'Review updated successfully'}), 200
+    return jsonify({'error': 'Update failed', 'errors': form.errors}), 400
+
+@app.route('/reviews/<int:review_id>', methods=['DELETE'])
+def delete_review(review_id):
+    review = Review.query.get(review_id)
+    if review is None:
+        return make_response(jsonify({'error': 'Review not found'}), 404)
+    
+    db.session.delete(review)
+    db.session.commit()
+    
+    return jsonify({'message': 'Review deleted successfully'}), 200
+
 
 if __name__ == '__main__':
     app.run(port=5555)

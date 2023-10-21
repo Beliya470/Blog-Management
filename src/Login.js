@@ -1,10 +1,8 @@
-// Login.js
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import './Login.css'; // Import the CSS file
+import './LogIn.css'; // Ensure this path is correct
 
-function Login({ onLogin }) {
+function LogIn({ onLogin }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
@@ -17,41 +15,33 @@ function Login({ onLogin }) {
     setPassword(e.target.value);
   };
 
-  const handleSeekerLogin = () => {
-    navigate('/dashboard');
-  };
-
-  const handleProviderLogin = () => {
-    navigate('/skillprovider');
-  };
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const loginData = {
-      username: username,
-      password: password,
-    };
-
-    fetch('https://skillswap-0fqo.onrender.com/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(loginData),
-    })
-      .then((response) => {
-        if (response.ok) {
-          onLogin();
-          navigate('/dashboard');
-        } else {
-          return response.json().then((errorData) => {
-            console.error('Authentication failed:', errorData.error);
-          });
-        }
-      })
-      .catch((error) => {
-        console.error('An error occurred:', error);
+    try {
+      const response = await fetch('/api/login', { // Ensure this URL is correct for your API endpoint
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
       });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.message === "Logged in successfully!") {
+          localStorage.setItem("token", data.token);
+          onLogin(); // This function should be passed from the parent component
+          navigate('/dashboard'); // Adjust if you have a different URL for your dashboard
+        } else {
+          console.error('Login failed:', data.error);
+        }
+      } else {
+        const errorData = await response.json();
+        console.error('Login failed:', errorData.error);
+      }
+    } catch (error) {
+      console.error('An error occurred:', error);
+    }
   };
 
   return (
@@ -80,18 +70,10 @@ function Login({ onLogin }) {
             required
           />
         </div>
-        <div className="login-options">
-          <button className="seeker-button" type="button" onClick={handleSeekerLogin}>
-            Login as Seeker
-          </button>
-          <button className="provider-button" type="button" onClick={handleProviderLogin}>
-            Login as Provider
-          </button>
-        </div>
-        <p className="hint">Hint: You can use any username and password for testing purposes.</p>
+        <button type="submit">Log In</button>
       </form>
     </div>
   );
 }
 
-export default Login;
+export default LogIn;

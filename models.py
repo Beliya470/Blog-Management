@@ -1,101 +1,89 @@
 from flask_sqlalchemy import SQLAlchemy
-from marshmallow import  validates, ValidationError,Schema
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import UserMixin
+from marshmallow import Schema, fields, validates, ValidationError
 import os
+
 db = SQLAlchemy()
 
-class User(db.Model):
+class User(db.Model, UserMixin):
     __tablename__ = 'users'
 
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String)
-    email = db.Column(db.String)
-    password = db.Column(db.String)
-    usertype = db.Column(db.String, default='seeker', nullable=True)
+    username = db.Column(db.String(150), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password = db.Column(db.String(150), nullable=False)
+    blogposts = db.relationship('BlogPost', backref='author', lazy=True)
+    reviews = db.relationship('Review', backref='reviewer', lazy=True)
 
-    # Define the one-to-many relationship with ServiceRequest
-    service_requests = db.relationship('ServiceRequest', back_populates='user')
-    service_provider = db.relationship('ServiceProvider', back_populates='user')
-    ratings = db.relationship('Rating', back_populates='user')
+    def __repr__(self):
+        return f'<User {self.username}>'
 
-    @staticmethod
-    def load_user(user_id):
-        return User.query.get(int(user_id))
+    def set_password(self, password):
+        self.password = generate_password_hash(password, method='sha256')
 
-class ServiceRequest(db.Model):
-    __tablename__ = 'service_request'
+    def check_password(self, password):
+        return check_password_hash(self.password, password)
 
-    id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String)
-    description = db.Column(db.String)
-    location = db.Column(db.String)
-    status = db.Column(db.String)
-
-    # Define the foreign key relationship to User
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-
-    # Define the one-to-one relationship with Rating
-    rating = db.relationship('Rating', uselist=False, back_populates='service_request')
-    user = db.relationship('User', back_populates='service_requests')
-
-class ServiceProvider(db.Model):
-    __tablename__ = 'service_provider'
+class BlogPost(db.Model):
+    __tablename__ = 'blog_posts'
 
     id = db.Column(db.Integer, primary_key=True)
-    fullname = db.Column(db.String)
-    skills = db.Column(db.String)
-    experience = db.Column(db.String)
-    availability = db.Column(db.String)
-
-    # Define the many-to-one relationship with User
+    title = db.Column(db.String(100), nullable=False)
+    content = db.Column(db.String(1000), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    user = db.relationship('User', back_populates='service_provider')
+    reviews = db.relationship('Review', backref='blogpost', lazy=True)
 
-class Rating(db.Model):
-    __tablename__ = 'rating'
+    def __repr__(self):
+        return f'<BlogPost {self.title}>'
+
+class Review(db.Model):
+    __tablename__ = 'reviews'
 
     id = db.Column(db.Integer, primary_key=True)
-    review = db.Column(db.String)
+    content = db.Column(db.String(500), nullable=False)
+    rating = db.Column(db.Integer, nullable=False)  # new field
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    service_request_id = db.Column(db.Integer, db.ForeignKey('service_request.id'), nullable=False)
+    blogpost_id = db.Column(db.Integer, db.ForeignKey('blog_posts.id'), nullable=False)
 
-    user = db.relationship('User', back_populates='ratings')
-    service_request = db.relationship('ServiceRequest', back_populates='rating')
+    def __repr__(self):
+        return f'<Review {self.id} Rating {self.rating}>'
 
-# Define Marshmallow schemas for serialization
+# Marshmallow schemas for serialization
 class UserSchema(Schema):
-    class Meta:
-        model = User
+    id = fields.Int(dump_only=True)
+    username = fields.Str(required=True)
+    email = fields.Email(required=True)
+    password = fields.Str(load_only=True, required=True)
 
-    # Add validation for the 'email' field
-    @validates('email')
-    def validate_email(self, value):
-        if not value:
-            raise ValidationError('Email is required')
-        
-    # Add validation for the 'password' field
     @validates('password')
     def validate_password(self, value):
-        if not value:
-            raise ValidationError('Password is required')
+        if len(value) < 6:
+            raise ValidationError('Password must be at least 6 characters long.')
 
-class ServiceRequestSchema(Schema):
-    class Meta:
-        model = ServiceRequest
+class BlogPostSchema(Schema):
+    id = fields.Int(dump_only=True)
+    title = fields.Str(required=True)
+    content = fields.Str(required=True)
+    user_id = fields.Int(required=True)
 
-class ServiceProviderSchema(Schema):
-    class Meta:
-        model = ServiceProvider
+class ReviewSchema(Schema):
+    id = fields.Int(dump_only=True)
+    content = fields.Str(required=True)
+    rating = fields.Int(required=True, error_messages={'required': 'Rating is required.'})
+    user_id = fields.Int(required=True)
+    blogpost_id = fields.Int(required=True)
 
-class RatingSchema(Schema):
-    class Meta:
-        model = Rating
+    @validates('rating')
+    def validate_rating(self, value):
+        if value < 1 or value > 5:
+            raise ValidationError('Rating must be between 1 and 5.')
 
 # Create instances of the schemas
 user_schema = UserSchema()
-service_request_schema = ServiceRequestSchema()
-service_provider_schema = ServiceProviderSchema()
-rating_schema = RatingSchema()
+blogpost_schema = BlogPostSchema()
+review_schema = ReviewSchema()
 
-
+# Sample database URI print statement (optional)
 db_uri = os.environ.get('DATABASE_URI')
 print("DATABASE_URI:", db_uri)
