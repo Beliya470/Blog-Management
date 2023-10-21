@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/SkillSwapHub/static/css/main.38f305a0.css",
-    "main.js": "/SkillSwapHub/static/js/main.c638474f.js",
-    "static/js/787.c4e7f8f9.chunk.js": "/SkillSwapHub/static/js/787.c4e7f8f9.chunk.js",
-    "index.html": "/SkillSwapHub/index.html",
-    "main.38f305a0.css.map": "/SkillSwapHub/static/css/main.38f305a0.css.map",
-    "main.c638474f.js.map": "/SkillSwapHub/static/js/main.c638474f.js.map",
-    "787.c4e7f8f9.chunk.js.map": "/SkillSwapHub/static/js/787.c4e7f8f9.chunk.js.map"
+    "main.css": "/static/css/main.f5127ccc.css",
+    "main.js": "/static/js/main.696e9869.js",
+    "static/js/787.c4e7f8f9.chunk.js": "/static/js/787.c4e7f8f9.chunk.js",
+    "index.html": "/index.html",
+    "main.f5127ccc.css.map": "/static/css/main.f5127ccc.css.map",
+    "main.696e9869.js.map": "/static/js/main.696e9869.js.map",
+    "787.c4e7f8f9.chunk.js.map": "/static/js/787.c4e7f8f9.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.38f305a0.css",
-    "static/js/main.c638474f.js"
+    "static/css/main.f5127ccc.css",
+    "static/js/main.696e9869.js"
   ]
 }
